@@ -42,7 +42,7 @@ public class Program
         });
 
         // Register application services
-        builder.Services.AddScoped<ICalendarService, GraphCalendarService>();
+        builder.Services.AddSingleton<ICalendarService, GraphCalendarService>();
 
         // Configure CORS to allow any origin (adjust for production as needed)
         builder.Services.AddCors(options =>
