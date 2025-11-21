@@ -22,6 +22,21 @@ public class GraphCalendarService : ICalendarService
     private readonly ILogger<GraphCalendarService> _logger;
 
     /// <summary>
+    /// Dictionary mapping category names to their corresponding HTML color codes.
+    /// Uses case-insensitive comparison for category lookups.
+    /// </summary>
+    private static readonly Dictionary<string, string> CategoryColorMap = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Holiday"] = "#41DC6A",
+        ["Holidays"] = "#41DC6A",
+        ["Payday"] = "#FBB117",
+        ["Community Event"] = "#D82231",
+        ["Giving Back"] = "#D82231",
+        ["Webinar"] = "#F47A20",
+        ["Staff Webinar"] = "#F47A20"
+    };
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="GraphCalendarService"/> class.
     /// </summary>
     /// <param name="graphClient">The Graph API client for making requests to Microsoft Graph.</param>
@@ -217,34 +232,15 @@ public class GraphCalendarService : ICalendarService
             return string.Empty;
         }
 
-        // Holiday events - green
-        if (appointment.Categories.Contains("Holiday", StringComparer.OrdinalIgnoreCase) ||
-            appointment.Categories.Contains("Holidays", StringComparer.OrdinalIgnoreCase))
+        // Use dictionary lookup for improved performance
+        foreach (string category in appointment.Categories)
         {
-            return "#41DC6A";
+            if (CategoryColorMap.TryGetValue(category, out string? color))
+            {
+                return color;
+            }
         }
 
-        // Payday events - orange
-        if (appointment.Categories.Contains("Payday", StringComparer.OrdinalIgnoreCase))
-        {
-            return "#FBB117";
-        }
-
-        // Community/charity events - red
-        if (appointment.Categories.Contains("Community Event", StringComparer.OrdinalIgnoreCase) ||
-            appointment.Categories.Contains("Giving Back", StringComparer.OrdinalIgnoreCase))
-        {
-            return "#D82231";
-        }
-
-        // Training/webinar events - orange
-        if (appointment.Categories.Contains("Webinar", StringComparer.OrdinalIgnoreCase) ||
-            appointment.Categories.Contains("Staff Webinar", StringComparer.OrdinalIgnoreCase))
-        {
-            return "#F47A20";
-        }
-
-        // No matching category
         return string.Empty;
     }
 
