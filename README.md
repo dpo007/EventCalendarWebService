@@ -28,6 +28,9 @@ This web service acts as a middleware layer between client applications and Micr
 - `GET /api/appointments` - Returns today's appointments
 - `GET /api/appointments?startDate=2025-01-01&endDate=2025-01-07` - Returns appointments in the supplied date range
 
+### Category Configuration
+- `GET /api/categories` - Returns all configured categories with their colors and metadata (includes both default and custom categories)
+
 ### Cache Management
 - `GET /api/appointments/cache/clear` - Clears all cached appointment data (forces fresh data on next request)
 
@@ -126,6 +129,8 @@ The service includes these built-in category colors:
 4. **Case-Insensitive Matching**: Category names are matched case-insensitively (e.g., "holiday" matches "Holiday")
 5. **Hot Reload**: Changes to `Categories.json` are detected automatically (no restart required)
 
+> **Tip**: Use `GET /api/categories` to view the current merged list of all configured categories and verify your customizations.
+
 #### Example Scenarios
 
 **Scenario 1: Add a new custom category**
@@ -189,12 +194,17 @@ curl https://your-api/api/appointments
 curl "https://your-api/api/appointments?startDate=2025-01-01&endDate=2025-01-31"
 ```
 
+### Get All Configured Categories
+```bash
+curl https://your-api/api/categories
+```
+
 ### Force Cache Refresh
 ```bash
 curl https://your-api/api/appointments/cache/clear
 ```
 
-### Example Response
+### Example Response - Appointments
 ```json
 {
         "id": "AAMkAGI...",
@@ -207,6 +217,42 @@ curl https://your-api/api/appointments/cache/clear
         "allDay": true
       }
 ```
+### Example Response - Categories
+```json
+[
+  {
+    "name": "Holiday",
+    "htmlColor": "#41DC6A",
+    "isDefault": true
+  },
+  {
+    "name": "Holidays",
+    "htmlColor": "#41DC6A",
+    "isDefault": true
+  },
+  {
+    "name": "Payday",
+    "htmlColor": "#FBB117",
+    "isDefault": true
+  },
+  {
+    "name": "Community Event",
+    "htmlColor": "#D82231",
+    "isDefault": true
+  },
+  {
+    "name": "Custom Category",
+    "htmlColor": "#FF5733",
+    "isDefault": false
+  }
+]
+```
+
+**Response Fields:**
+- `name` - The category name (case-insensitive matching)
+- `htmlColor` - HTML color code (e.g., "#41DC6A")
+- `isDefault` - `true` for built-in categories, `false` for custom categories from Categories.json
+
 ## Code Quality
 - ✅ **Comprehensive XML documentation** on all public APIs
 - ✅ **Inline comments** explaining complex logic
@@ -219,13 +265,17 @@ curl https://your-api/api/appointments/cache/clear
 ## Architecture
 ```
 ├── Controllers/
-│   └── AppointmentsController.cs    # API endpoints + cache management
+│   ├── AppointmentsController.cs    # Appointment endpoints + cache management
+│   └── CategoriesController.cs      # Category configuration endpoint
 ├── Services/
-│   ├── ICalendarService.cs          # Service abstraction
+│   ├── ICalendarService.cs          # Calendar service abstraction
 │   ├── GraphCalendarService.cs      # Graph API implementation
-│   └── CachedCalendarService.cs     # Caching decorator
+│   ├── CachedCalendarService.cs     # Caching decorator
+│   ├── ICategoryService.cs          # Category service abstraction
+│   └── CategoryService.cs           # Category management implementation
 ├── Models/
-│   └── SimpleAppointment.cs         # DTO for appointments
+│   ├── SimpleAppointment.cs         # DTO for appointments
+│   └── CategoryInfo.cs              # DTO for category information
 ├── Options/
 │   ├── GraphApiOptions.cs           # Graph API configuration model
 │   ├── CacheOptions.cs              # Cache configuration model

@@ -52,8 +52,8 @@ public class GraphCalendarService : ICalendarService
     /// <param name="categoryOptions">Configuration options for category color mappings.</param>
     /// <param name="logger">Logger for diagnostic information.</param>
     public GraphCalendarService(
-        GraphServiceClient graphClient, 
-        IOptions<GraphApiOptions> options, 
+        GraphServiceClient graphClient,
+        IOptions<GraphApiOptions> options,
         IOptions<CategoryOptions> categoryOptions,
         ILogger<GraphCalendarService> logger)
     {
@@ -63,7 +63,7 @@ public class GraphCalendarService : ICalendarService
 
         // Build category color map: start with defaults, then merge/override with custom categories
         _categoryColorMap = new Dictionary<string, string>(DefaultCategoryColors, StringComparer.OrdinalIgnoreCase);
-        
+
         foreach (CategoryDefinition category in categoryOptions.Value.Categories)
         {
             _categoryColorMap[category.Name] = category.HtmlColor;

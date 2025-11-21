@@ -66,6 +66,8 @@ public class Program
 
         // Register application services with caching
         builder.Services.AddSingleton<GraphCalendarService>();
+        builder.Services.AddSingleton<CategoryService>();
+        builder.Services.AddSingleton<ICategoryService>(sp => sp.GetRequiredService<CategoryService>());
         builder.Services.AddSingleton<ICalendarService>(sp =>
         {
             GraphCalendarService innerService = sp.GetRequiredService<GraphCalendarService>();
