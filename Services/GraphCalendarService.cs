@@ -20,6 +20,8 @@ public class GraphCalendarService : ICalendarService
     private readonly GraphServiceClient _graphClient;
     private readonly GraphApiOptions _options;
     private readonly ILogger<GraphCalendarService> _logger;
+    private readonly SemaphoreSlim _calendarIdLock = new(1, 1);
+    private string? _cachedCalendarId;
 
     /// <summary>
     /// Dictionary mapping category names to their corresponding HTML color codes.
@@ -74,6 +76,64 @@ public class GraphCalendarService : ICalendarService
     }
 
     /// <summary>
+    /// Retrieves the calendar ID for the configured calendar, using a cached value if available.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The calendar ID.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the specified calendar cannot be found.</exception>
+    private async Task<string> GetCalendarIdAsync(CancellationToken cancellationToken)
+    {
+        // Return cached value if already resolved
+        if (_cachedCalendarId is not null)
+        {
+            return _cachedCalendarId;
+        }
+
+        // Use semaphore to prevent multiple concurrent lookups
+        await _calendarIdLock.WaitAsync(cancellationToken);
+        try
+        {
+            // Double-check after acquiring lock
+            if (_cachedCalendarId is not null)
+            {
+                return _cachedCalendarId;
+            }
+
+            _logger.LogInformation(
+                "Looking up calendar ID for '{CalendarName}' for user {User}",
+                _options.CalendarName,
+                _options.CalendarUserUpn);
+
+            // Retrieve the list of calendars for the specified user
+            CalendarCollectionResponse? calendarsResponse = await _graphClient.Users[_options.CalendarUserUpn]
+                .Calendars
+                .GetAsync(requestConfiguration =>
+                {
+                    requestConfiguration.QueryParameters.Top = 50;
+                }, cancellationToken);
+
+            // Find the calendar by name (case-insensitive comparison)
+            string? calendarId = calendarsResponse?.Value?
+                .FirstOrDefault(c => string.Equals(c.Name, _options.CalendarName, StringComparison.OrdinalIgnoreCase))?
+                .Id;
+
+            if (string.IsNullOrEmpty(calendarId))
+            {
+                throw new InvalidOperationException($"Calendar '{_options.CalendarName}' not found for user '{_options.CalendarUserUpn}'.");
+            }
+
+            _cachedCalendarId = calendarId;
+            _logger.LogInformation("Calendar ID cached: {CalendarId}", calendarId);
+
+            return calendarId;
+        }
+        finally
+        {
+            _calendarIdLock.Release();
+        }
+    }
+
+    /// <summary>
     /// Retrieves calendar events from Microsoft Graph API within the specified date range.
     /// </summary>
     /// <param name="startDate">The start date of the range.</param>
@@ -90,25 +150,10 @@ public class GraphCalendarService : ICalendarService
             endDate,
             _options.CalendarName);
 
-        // Step 1: Retrieve the list of calendars for the specified user
-        CalendarCollectionResponse? calendarsResponse = await _graphClient.Users[_options.CalendarUserUpn]
-            .Calendars
-            .GetAsync(requestConfiguration =>
-            {
-                requestConfiguration.QueryParameters.Top = 50;
-            }, cancellationToken);
+        // Get the calendar ID (uses cache if available)
+        string calendarId = await GetCalendarIdAsync(cancellationToken);
 
-        // Step 2: Find the calendar by name (case-insensitive comparison)
-        string? calendarId = calendarsResponse?.Value?
-            .FirstOrDefault(c => string.Equals(c.Name, _options.CalendarName, StringComparison.OrdinalIgnoreCase))?
-            .Id;
-
-        if (string.IsNullOrEmpty(calendarId))
-        {
-            throw new InvalidOperationException($"Calendar '{_options.CalendarName}' not found for user '{_options.CalendarUserUpn}'.");
-        }
-
-        // Step 3: Query the calendar view for events in the specified date range
+        // Query the calendar view for events in the specified date range
         // Include attachments in the response for inline image processing
         EventCollectionResponse? calendarView = await _graphClient.Users[_options.CalendarUserUpn]
             .Calendars[calendarId]
