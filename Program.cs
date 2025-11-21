@@ -1,8 +1,8 @@
 using Azure.Identity;
 using EventCalendarWebService.Options;
 using EventCalendarWebService.Services;
-using Microsoft.Graph;
 using Microsoft.Extensions.Options;
+using Microsoft.Graph;
 
 namespace EventCalendarWebService;
 
@@ -12,7 +12,7 @@ public class Program
 
     public static void Main(string[] args)
     {
-        var builder = WebApplication.CreateBuilder(args);
+        WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
         builder.Services
             .AddOptions<GraphApiOptions>()
@@ -24,8 +24,8 @@ public class Program
 
         builder.Services.AddSingleton(sp =>
         {
-            var options = sp.GetRequiredService<IOptions<GraphApiOptions>>().Value;
-            var credential = new ClientSecretCredential(options.TenantId, options.ClientId, options.SecretKey);
+            GraphApiOptions options = sp.GetRequiredService<IOptions<GraphApiOptions>>().Value;
+            ClientSecretCredential credential = new ClientSecretCredential(options.TenantId, options.ClientId, options.SecretKey);
             return new GraphServiceClient(credential, GraphScopes);
         });
 
@@ -43,7 +43,7 @@ public class Program
         builder.Services.AddOpenApi();
         builder.Services.AddHealthChecks();
 
-        var app = builder.Build();
+        WebApplication app = builder.Build();
 
         if (app.Environment.IsDevelopment())
         {

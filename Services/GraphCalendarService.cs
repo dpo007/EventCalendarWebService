@@ -1,9 +1,9 @@
-using System.Globalization;
 using EventCalendarWebService.Models;
 using EventCalendarWebService.Options;
 using Microsoft.Extensions.Options;
 using Microsoft.Graph;
 using Microsoft.Graph.Models;
+using System.Globalization;
 
 namespace EventCalendarWebService.Services;
 
@@ -22,8 +22,8 @@ public class GraphCalendarService : ICalendarService
 
     public Task<IReadOnlyList<SimpleAppointment>> GetTodaysAppointmentsAsync(CancellationToken cancellationToken = default)
     {
-        var start = DateTime.Today;
-        var end = DateTime.Today.AddHours(23).AddMinutes(59);
+        DateTime start = DateTime.Today;
+        DateTime end = DateTime.Today.AddHours(23).AddMinutes(59);
         return GetRangeOfAppointmentsAsync(start, end, cancellationToken);
     }
 
@@ -34,7 +34,7 @@ public class GraphCalendarService : ICalendarService
             throw new ArgumentException("End date must be greater than or equal to the start date.", nameof(endDate));
         }
 
-        var events = await GetCalendarEventsAsync(startDate, endDate, cancellationToken);
+        IEnumerable<Event> events = await GetCalendarEventsAsync(startDate, endDate, cancellationToken);
         return events.Select(MapAppointment).ToList();
     }
 
@@ -42,14 +42,14 @@ public class GraphCalendarService : ICalendarService
     {
         _logger.LogInformation("Fetching events for {User} from {Start} to {End} on calendar {Calendar}", _options.CalendarUserUpn, startDate, endDate, _options.CalendarName);
 
-        var calendarsResponse = await _graphClient.Users[_options.CalendarUserUpn]
+        CalendarCollectionResponse? calendarsResponse = await _graphClient.Users[_options.CalendarUserUpn]
             .Calendars
             .GetAsync(requestConfiguration =>
             {
                 requestConfiguration.QueryParameters.Top = 50;
             }, cancellationToken);
 
-        var calendarId = calendarsResponse?.Value?
+        string? calendarId = calendarsResponse?.Value?
             .FirstOrDefault(c => string.Equals(c.Name, _options.CalendarName, StringComparison.OrdinalIgnoreCase))?
             .Id;
 
@@ -58,7 +58,7 @@ public class GraphCalendarService : ICalendarService
             throw new InvalidOperationException($"Calendar '{_options.CalendarName}' not found for user '{_options.CalendarUserUpn}'.");
         }
 
-        var calendarView = await _graphClient.Users[_options.CalendarUserUpn]
+        EventCollectionResponse? calendarView = await _graphClient.Users[_options.CalendarUserUpn]
             .Calendars[calendarId]
             .CalendarView
             .GetAsync(requestConfiguration =>
@@ -74,10 +74,10 @@ public class GraphCalendarService : ICalendarService
 
     private SimpleAppointment MapAppointment(Event calendarEvent)
     {
-        var isAllDay = calendarEvent.IsAllDay ?? false;
-        var start = ParseGraphDate(calendarEvent.Start, !isAllDay);
-        var end = ParseGraphDate(calendarEvent.End, !isAllDay);
-        var bodyContent = InlineAttachments(calendarEvent, calendarEvent.Body?.Content ?? string.Empty);
+        bool isAllDay = calendarEvent.IsAllDay ?? false;
+        DateTime start = ParseGraphDate(calendarEvent.Start, !isAllDay);
+        DateTime end = ParseGraphDate(calendarEvent.End, !isAllDay);
+        string bodyContent = InlineAttachments(calendarEvent, calendarEvent.Body?.Content ?? string.Empty);
 
         return new SimpleAppointment
         {
@@ -99,7 +99,7 @@ public class GraphCalendarService : ICalendarService
             return DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc);
         }
 
-        var parsedDate = DateTime.Parse(dateTime.DateTime, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+        DateTime parsedDate = DateTime.Parse(dateTime.DateTime, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
         return convertToLocal ? parsedDate.ToLocalTime() : parsedDate;
     }
 
@@ -110,7 +110,7 @@ public class GraphCalendarService : ICalendarService
             return bodyContent;
         }
 
-        foreach (var attachment in calendarEvent.Attachments)
+        foreach (Attachment attachment in calendarEvent.Attachments)
         {
             if (attachment is FileAttachment fileAttachment &&
                 fileAttachment.IsInline == true &&
@@ -118,8 +118,8 @@ public class GraphCalendarService : ICalendarService
                 fileAttachment.ContentBytes is not null &&
                 !string.IsNullOrEmpty(fileAttachment.ContentId))
             {
-                var contentId = "cid:" + fileAttachment.ContentId;
-                var embeddedImage = $"data:image;base64,{Convert.ToBase64String(fileAttachment.ContentBytes)}";
+                string contentId = "cid:" + fileAttachment.ContentId;
+                string embeddedImage = $"data:image;base64,{Convert.ToBase64String(fileAttachment.ContentBytes)}";
                 bodyContent = bodyContent.Replace(contentId, embeddedImage, StringComparison.OrdinalIgnoreCase);
             }
         }

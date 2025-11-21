@@ -24,7 +24,7 @@ public class AppointmentsController : ControllerBase
     {
         if (!startDate.HasValue && !endDate.HasValue)
         {
-            var todaysAppointments = await _calendarService.GetTodaysAppointmentsAsync(cancellationToken);
+            IReadOnlyList<SimpleAppointment> todaysAppointments = await _calendarService.GetTodaysAppointmentsAsync(cancellationToken);
             return Ok(todaysAppointments);
         }
 
@@ -39,7 +39,7 @@ public class AppointmentsController : ControllerBase
         }
 
         _logger.LogInformation("Fetching appointments between {Start} and {End}", startDate.Value, endDate.Value);
-        var appointments = await _calendarService.GetRangeOfAppointmentsAsync(startDate.Value, endDate.Value, cancellationToken);
+        IReadOnlyList<SimpleAppointment> appointments = await _calendarService.GetRangeOfAppointmentsAsync(startDate.Value, endDate.Value, cancellationToken);
         return Ok(appointments);
     }
 }
