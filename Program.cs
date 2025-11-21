@@ -25,6 +25,9 @@ public class Program
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
+        // Add Categories.json configuration file
+        builder.Configuration.AddJsonFile("Categories.json", optional: true, reloadOnChange: true);
+
         // Configure and validate Graph API options from appsettings
         builder.Services
             .AddOptions<GraphApiOptions>()
@@ -39,6 +42,12 @@ public class Program
             .AddOptions<CacheOptions>()
             .Bind(builder.Configuration.GetSection("Cache"))
             .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        // Configure category options from Categories.json
+        builder.Services
+            .AddOptions<CategoryOptions>()
+            .Bind(builder.Configuration)
             .ValidateOnStart();
 
         // Register ClientSecretCredential as singleton for token caching

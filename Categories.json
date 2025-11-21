@@ -1,0 +1,32 @@
+{
+  "Categories": [
+    {
+      "Name": "Holiday",
+      "HtmlColor": "#41DC6A"
+    },
+    {
+      "Name": "Holidays",
+      "HtmlColor": "#41DC6A"
+    },
+    {
+      "Name": "Payday",
+      "HtmlColor": "#FBB117"
+    },
+    {
+      "Name": "Community Event",
+      "HtmlColor": "#D82231"
+    },
+    {
+      "Name": "Giving Back",
+      "HtmlColor": "#D82231"
+    },
+    {
+      "Name": "Webinar",
+      "HtmlColor": "#F47A20"
+    },
+    {
+      "Name": "Staff Webinar",
+      "HtmlColor": "#F47A20"
+    }
+  ]
+}

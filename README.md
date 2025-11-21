@@ -11,6 +11,7 @@ This web service acts as a middleware layer between client applications and Micr
 - **High Performance** - Multi-layer caching drastically reduces API calls and improves response times
 - **Centralized Authentication** - Service-to-service authentication using client credentials (no user login required)
 - **Pre-processed Data** - Events are enriched with color coding, inline images, and timezone conversions
+- **Customizable Categories** - Define custom category colors without code changes
 - **Frontend-Friendly** - Returns data in a simplified format optimized for JavaScript/web consumption
 - **Production-Ready** - Includes health checks, structured logging, configurable caching, and comprehensive error handling
 
@@ -38,11 +39,7 @@ This web service acts as a middleware layer between client applications and Micr
 ### Core Functionality
 - **Microsoft Graph Integration** - Uses modern Graph SDK with client credentials flow
 - **Inline Image Support** - Converts inline email images to base64 data URIs
-- **Category-Based Coloring** - Automatic color coding based on appointment categories:
-  - Holiday/Holidays: Green (#41DC6A)
-  - Payday: Orange (#FBB117)
-  - Community Event/Giving Back: Red (#D82231)
-  - Webinar/Staff Webinar: Orange (#F47A20)
+- **Customizable Category-Based Coloring** - Automatic color coding based on appointment categories with configurable colors via JSON
 - **Timezone Handling** - Proper conversion for regular events, preserves dates for all-day events
 
 ### Performance Optimizations
@@ -62,6 +59,8 @@ This web service acts as a middleware layer between client applications and Micr
 
 ## Configuration
 
+### Main Application Configuration
+
 Configure the service in `appsettings.json` (or environment variables/user secrets):
 
 ```json
@@ -79,8 +78,6 @@ Configure the service in `appsettings.json` (or environment variables/user secre
 }
 ```
 
-### Configuration Options
-
 #### GraphApi Section
 - `ClientId` - Azure AD app registration client ID
 - `TenantId` - Azure AD directory (tenant) ID
@@ -94,10 +91,82 @@ Configure the service in `appsettings.json` (or environment variables/user secre
   - Lower values = fresher data, higher API usage
   - Higher values = better performance, potentially stale data
 
+### Category Color Customization
+
+Customize appointment colors by creating a `Categories.json` file in the application root directory (same location as `appsettings.json`):
+
+```json
+{
+  "Categories": [
+    {
+      "Name": "Holiday",
+      "HtmlColor": "#41DC6A"
+    },
+    {
+      "Name": "Custom Category",
+      "HtmlColor": "#FF5733"
+    }
+  ]
+}
+```
+
+#### Default Categories
+
+The service includes these built-in category colors:
+- **Holiday/Holidays**: `#41DC6A` (green)
+- **Payday**: `#FBB117` (orange)
+- **Community Event/Giving Back**: `#D82231` (red)
+- **Webinar/Staff Webinar**: `#F47A20` (orange)
+
+#### How Category Colors Work
+
+1. **Default Behavior**: If `Categories.json` is missing or empty, the service uses the built-in default categories
+2. **Add Custom Categories**: Define new categories in `Categories.json` - they will be merged with the defaults
+3. **Override Default Colors**: Define a category with the same name to override its color
+4. **Case-Insensitive Matching**: Category names are matched case-insensitively (e.g., "holiday" matches "Holiday")
+5. **Hot Reload**: Changes to `Categories.json` are detected automatically (no restart required)
+
+#### Example Scenarios
+
+**Scenario 1: Add a new custom category**
+```json
+{
+  "Categories": [
+    {
+      "Name": "Training",
+      "HtmlColor": "#9B59B6"
+    }
+  ]
+}
+```
+Result: All default categories still work + new "Training" category with purple color
+
+**Scenario 2: Override an existing category color**
+```json
+{
+  "Categories": [
+    {
+      "Name": "Payday",
+      "HtmlColor": "#00FF00"
+    }
+  ]
+}
+```
+Result: Payday events now use bright green instead of orange, all other defaults unchanged
+
+**Scenario 3: Use only default categories**
+```json
+{
+  "Categories": []
+}
+```
+Or simply delete/don't create `Categories.json` - Result: All default categories work as normal
+
 ### Environment-Specific Configuration
 - `appsettings.json` - Base configuration with production-level logging
 - `appsettings.Development.json` - Development settings with verbose logging
 - `appsettings.Production.json` - Production overrides
+- `Categories.json` - Category color customization (optional, applies to all environments)
 
 ## Performance Characteristics
 
@@ -125,6 +194,19 @@ curl "https://your-api/api/appointments?startDate=2025-01-01&endDate=2025-01-31"
 curl https://your-api/api/appointments/cache/clear
 ```
 
+### Example Response
+```json
+{
+        "id": "AAMkAGI...",
+        "subject": "Holiday - New Year's Day",
+        "body": null,
+        "location": null,
+        "htmlColour": "#41DC6A",
+        "start": 1704067200000,
+        "end": 1704153600000,
+        "allDay": true
+      }
+```
 ## Code Quality
 - ✅ **Comprehensive XML documentation** on all public APIs
 - ✅ **Inline comments** explaining complex logic
@@ -146,14 +228,17 @@ curl https://your-api/api/appointments/cache/clear
 │   └── SimpleAppointment.cs         # DTO for appointments
 ├── Options/
 │   ├── GraphApiOptions.cs           # Graph API configuration model
-│   └── CacheOptions.cs              # Cache configuration model
-└── Program.cs                        # Application startup + DI configuration
+│   ├── CacheOptions.cs              # Cache configuration model
+│   └── CategoryOptions.cs           # Category color configuration model
+├── Program.cs                        # Application startup + DI configuration
+├── appsettings.json                  # Main application configuration
+└── Categories.json                   # Optional category color customization
 ```
 
 ### Design Patterns
 - **Decorator Pattern** - `CachedCalendarService` wraps `GraphCalendarService` for transparent caching
 - **Singleton Pattern** - All services registered as singletons for maximum cache effectiveness
-- **Options Pattern** - Configuration via strongly-typed options classes
+- **Options Pattern** - Configuration via strongly-typed options classes with validation
 - **Dependency Injection** - Constructor injection throughout
 
 ## Dependencies

@@ -34,11 +34,13 @@ public class SimpleAppointment
     /// Gets or initializes the HTML color code for the appointment based on its category.
     /// </summary>
     /// <remarks>
-    /// Color is determined by appointment categories:
+    /// Color is determined by appointment categories using mappings defined in Categories.json.
+    /// Default categories include:
     /// - Holiday/Holidays: #41DC6A (green)
     /// - Payday: #FBB117 (orange)
     /// - Community Event/Giving Back: #D82231 (red)
     /// - Webinar/Staff Webinar: #F47A20 (orange)
+    /// Custom categories can be added or overridden via the Categories.json configuration file.
     /// </remarks>
     public string? HtmlColour { get; init; }
 

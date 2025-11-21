@@ -26,8 +26,14 @@ public class GraphCalendarService : ICalendarService
     /// <summary>
     /// Dictionary mapping category names to their corresponding HTML color codes.
     /// Uses case-insensitive comparison for category lookups.
+    /// Combines default categories with custom categories from configuration.
     /// </summary>
-    private static readonly Dictionary<string, string> CategoryColorMap = new(StringComparer.OrdinalIgnoreCase)
+    private readonly Dictionary<string, string> _categoryColorMap;
+
+    /// <summary>
+    /// Default category color mappings used when no custom configuration is provided.
+    /// </summary>
+    private static readonly Dictionary<string, string> DefaultCategoryColors = new(StringComparer.OrdinalIgnoreCase)
     {
         ["Holiday"] = "#41DC6A",
         ["Holidays"] = "#41DC6A",
@@ -43,12 +49,25 @@ public class GraphCalendarService : ICalendarService
     /// </summary>
     /// <param name="graphClient">The Graph API client for making requests to Microsoft Graph.</param>
     /// <param name="options">Configuration options for Graph API access.</param>
+    /// <param name="categoryOptions">Configuration options for category color mappings.</param>
     /// <param name="logger">Logger for diagnostic information.</param>
-    public GraphCalendarService(GraphServiceClient graphClient, IOptions<GraphApiOptions> options, ILogger<GraphCalendarService> logger)
+    public GraphCalendarService(
+        GraphServiceClient graphClient, 
+        IOptions<GraphApiOptions> options, 
+        IOptions<CategoryOptions> categoryOptions,
+        ILogger<GraphCalendarService> logger)
     {
         _graphClient = graphClient;
         _logger = logger;
         _options = options.Value;
+
+        // Build category color map: start with defaults, then merge/override with custom categories
+        _categoryColorMap = new Dictionary<string, string>(DefaultCategoryColors, StringComparer.OrdinalIgnoreCase);
+        
+        foreach (CategoryDefinition category in categoryOptions.Value.Categories)
+        {
+            _categoryColorMap[category.Name] = category.HtmlColor;
+        }
     }
 
     /// <inheritdoc />
@@ -262,15 +281,10 @@ public class GraphCalendarService : ICalendarService
     /// An HTML color code if the appointment matches a known category, otherwise an empty string.
     /// </returns>
     /// <remarks>
-    /// Supported categories and their colors:
-    /// <list type="bullet">
-    /// <item><description>Holiday/Holidays: #41DC6A (green)</description></item>
-    /// <item><description>Payday: #FBB117 (orange)</description></item>
-    /// <item><description>Community Event/Giving Back: #D82231 (red)</description></item>
-    /// <item><description>Webinar/Staff Webinar: #F47A20 (orange)</description></item>
-    /// </list>
+    /// Supported categories and their colors are determined by the combination of default
+    /// categories and custom categories defined in Categories.json configuration file.
     /// </remarks>
-    private static string GetColouring(Event appointment)
+    private string GetColouring(Event appointment)
     {
         if (appointment.Categories is null)
         {
@@ -280,7 +294,7 @@ public class GraphCalendarService : ICalendarService
         // Use dictionary lookup for improved performance
         foreach (string category in appointment.Categories)
         {
-            if (CategoryColorMap.TryGetValue(category, out string? color))
+            if (_categoryColorMap.TryGetValue(category, out string? color))
             {
                 return color;
             }
