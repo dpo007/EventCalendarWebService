@@ -6,14 +6,25 @@ using Microsoft.Graph;
 
 namespace EventCalendarWebService;
 
+/// <summary>
+/// The main entry point for the Event Calendar Web Service application.
+/// </summary>
 public class Program
 {
+    /// <summary>
+    /// The Graph API scopes required for calendar access.
+    /// </summary>
     private static readonly string[] GraphScopes = ["https://graph.microsoft.com/.default"];
 
+    /// <summary>
+    /// The main entry point for the application.
+    /// </summary>
+    /// <param name="args">Command-line arguments.</param>
     public static void Main(string[] args)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
+        // Configure and validate Graph API options from appsettings
         builder.Services
             .AddOptions<GraphApiOptions>()
             .Bind(builder.Configuration.GetSection("GraphApi"))
@@ -22,6 +33,7 @@ public class Program
             .Validate(options => !string.IsNullOrWhiteSpace(options.CalendarUserUpn), "Calendar user UPN is required.")
             .ValidateOnStart();
 
+        // Register Graph Service Client with client credentials authentication
         builder.Services.AddSingleton(sp =>
         {
             GraphApiOptions options = sp.GetRequiredService<IOptions<GraphApiOptions>>().Value;
@@ -29,8 +41,10 @@ public class Program
             return new GraphServiceClient(credential, GraphScopes);
         });
 
+        // Register application services
         builder.Services.AddScoped<ICalendarService, GraphCalendarService>();
 
+        // Configure CORS to allow any origin (adjust for production as needed)
         builder.Services.AddCors(options =>
         {
             options.AddDefaultPolicy(policy =>
@@ -39,24 +53,25 @@ public class Program
             });
         });
 
+        // Add framework services
         builder.Services.AddControllers();
         builder.Services.AddOpenApi();
         builder.Services.AddHealthChecks();
 
         WebApplication app = builder.Build();
 
+        // Configure the HTTP request pipeline
         if (app.Environment.IsDevelopment())
         {
             app.MapOpenApi();
         }
 
         app.UseHttpsRedirection();
-
         app.UseRouting();
         app.UseCors();
-
         app.UseAuthorization();
 
+        // Map endpoints
         app.MapControllers();
         app.MapHealthChecks("/health");
 
