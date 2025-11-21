@@ -1,6 +1,7 @@
 using Azure.Identity;
 using EventCalendarWebService.Options;
 using EventCalendarWebService.Services;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Microsoft.Graph;
 
@@ -33,6 +34,13 @@ public class Program
             .Validate(options => !string.IsNullOrWhiteSpace(options.CalendarUserUpn), "Calendar user UPN is required.")
             .ValidateOnStart();
 
+        // Configure cache options from appsettings
+        builder.Services
+            .AddOptions<CacheOptions>()
+            .Bind(builder.Configuration.GetSection("Cache"))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
         // Register ClientSecretCredential as singleton for token caching
         builder.Services.AddSingleton<ClientSecretCredential>(sp =>
         {
@@ -47,8 +55,16 @@ public class Program
             return new GraphServiceClient(credential, GraphScopes);
         });
 
-        // Register application services
-        builder.Services.AddSingleton<ICalendarService, GraphCalendarService>();
+        // Register application services with caching
+        builder.Services.AddSingleton<GraphCalendarService>();
+        builder.Services.AddSingleton<ICalendarService>(sp =>
+        {
+            GraphCalendarService innerService = sp.GetRequiredService<GraphCalendarService>();
+            IMemoryCache cache = sp.GetRequiredService<IMemoryCache>();
+            IOptions<CacheOptions> cacheOptions = sp.GetRequiredService<IOptions<CacheOptions>>();
+            ILogger<CachedCalendarService> logger = sp.GetRequiredService<ILogger<CachedCalendarService>>();
+            return new CachedCalendarService(innerService, cache, cacheOptions, logger);
+        });
 
         // Configure CORS to allow any origin (adjust for production as needed)
         builder.Services.AddCors(options =>
@@ -60,9 +76,20 @@ public class Program
         });
 
         // Add framework services
-        builder.Services.AddControllers();
+        builder.Services.AddControllers(options =>
+        {
+            // Configure response cache profile using cache duration from settings
+            int cacheDurationSeconds = builder.Configuration.GetSection("Cache").GetValue<int>("DurationMinutes", 5) * 60;
+            options.CacheProfiles.Add("Default", new Microsoft.AspNetCore.Mvc.CacheProfile
+            {
+                Duration = cacheDurationSeconds,
+                VaryByQueryKeys = ["startDate", "endDate"]
+            });
+        });
         builder.Services.AddOpenApi();
         builder.Services.AddHealthChecks();
+        builder.Services.AddMemoryCache();
+        builder.Services.AddResponseCaching();
 
         WebApplication app = builder.Build();
 
@@ -74,6 +101,7 @@ public class Program
 
         app.UseHttpsRedirection();
         app.UseRouting();
+        app.UseResponseCaching();
         app.UseCors();
         app.UseAuthorization();
 

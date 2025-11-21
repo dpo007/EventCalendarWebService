@@ -13,6 +13,7 @@ public class AppointmentsController : ControllerBase
 {
     private readonly ICalendarService _calendarService;
     private readonly ILogger<AppointmentsController> _logger;
+    private readonly CachedCalendarService? _cachedService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AppointmentsController"/> class.
@@ -21,6 +22,7 @@ public class AppointmentsController : ControllerBase
     {
         _calendarService = calendarService;
         _logger = logger;
+        _cachedService = calendarService as CachedCalendarService;
     }
 
     /// <summary>
@@ -35,6 +37,7 @@ public class AppointmentsController : ControllerBase
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ResponseCache(CacheProfileName = "Default")]
     public async Task<ActionResult<IReadOnlyList<SimpleAppointment>>> GetAsync(
         [FromQuery] DateTime? startDate,
         [FromQuery] DateTime? endDate,
@@ -64,5 +67,24 @@ public class AppointmentsController : ControllerBase
         IReadOnlyList<SimpleAppointment> appointments = await _calendarService.GetRangeOfAppointmentsAsync(startDate.Value, endDate.Value, cancellationToken);
 
         return Ok(appointments);
+    }
+
+    /// <summary>
+    /// Clears the appointment cache, forcing fresh data retrieval on the next request.
+    /// </summary>
+    /// <returns>Status indicating cache was cleared.</returns>
+    /// <response code="200">Cache was successfully cleared.</response>
+    [HttpGet("cache/clear")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public IActionResult ClearCache()
+    {
+        if (_cachedService is null)
+        {
+            return Ok(new { message = "Caching is not enabled." });
+        }
+
+        _cachedService.ClearCache();
+        _logger.LogWarning("All appointment cache cleared via API request.");
+        return Ok(new { message = "All appointment cache cleared successfully." });
     }
 }
