@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36705.20 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventCalendarWebService", "EventCalendarWebService.csproj", "{258319E1-0487-4E3F-806D-8DED7B499761}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{258319E1-0487-4E3F-806D-8DED7B499761}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{258319E1-0487-4E3F-806D-8DED7B499761}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{258319E1-0487-4E3F-806D-8DED7B499761}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{258319E1-0487-4E3F-806D-8DED7B499761}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {6EC95F1B-D67E-4ACD-9858-79F9BE34F80A}
+	EndGlobalSection
+EndGlobal
