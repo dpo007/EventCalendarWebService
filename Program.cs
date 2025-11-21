@@ -33,11 +33,17 @@ public class Program
             .Validate(options => !string.IsNullOrWhiteSpace(options.CalendarUserUpn), "Calendar user UPN is required.")
             .ValidateOnStart();
 
-        // Register Graph Service Client with client credentials authentication
-        builder.Services.AddSingleton(sp =>
+        // Register ClientSecretCredential as singleton for token caching
+        builder.Services.AddSingleton<ClientSecretCredential>(sp =>
         {
             GraphApiOptions options = sp.GetRequiredService<IOptions<GraphApiOptions>>().Value;
-            ClientSecretCredential credential = new ClientSecretCredential(options.TenantId, options.ClientId, options.SecretKey);
+            return new ClientSecretCredential(options.TenantId, options.ClientId, options.SecretKey);
+        });
+
+        // Register Graph Service Client with shared credential instance
+        builder.Services.AddSingleton(sp =>
+        {
+            ClientSecretCredential credential = sp.GetRequiredService<ClientSecretCredential>();
             return new GraphServiceClient(credential, GraphScopes);
         });
 
