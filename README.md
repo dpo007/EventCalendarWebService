@@ -1,6 +1,24 @@
 ﻿# Event Calendar Web Service
 
-A .NET 9 REST API that surfaces calendar events from Microsoft Graph, modernized from the legacy EventCalendarService.
+A .NET 9 REST API that surfaces calendar events from Microsoft Graph, providing a streamlined interface for accessing organizational calendar data.
+
+## Overview
+
+This web service acts as a middleware layer between client applications and Microsoft Graph, simplifying calendar access with a clean REST API. It's designed for scenarios where you need to display organizational calendar events (such as company holidays, paydays, community events, or webinars) in internal portals, dashboards, or custom applications without implementing the full Microsoft Graph authentication flow on the client side.
+
+**Key Benefits:**
+- **Simplified Integration** - Single REST endpoint instead of complex Graph API queries
+- **Centralized Authentication** - Service-to-service authentication using client credentials (no user login required)
+- **Pre-processed Data** - Events are enriched with color coding, inline images, and timezone conversions
+- **Frontend-Friendly** - Returns data in a simplified format optimized for JavaScript/web consumption
+- **Production-Ready** - Includes health checks, structured logging, and comprehensive error handling
+
+## Use Cases
+- Display company-wide events on employee intranet dashboards
+- Integrate organizational calendar into custom web applications
+- Provide read-only calendar access to third-party systems
+- Create public-facing event calendars from private Microsoft 365 calendars
+- Build notification systems for upcoming events
 
 ## Endpoints
 - `GET /api/appointments` - returns today's appointments.
