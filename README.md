@@ -62,6 +62,67 @@ This web service acts as a middleware layer between client applications and Micr
 
 ## Configuration
 
+### Prerequisites
+
+Before configuring the application, you need to create an Azure AD (Entra ID) app registration to enable Microsoft Graph API access.
+
+### Azure AD App Registration Setup
+
+#### Step 1: Create App Registration
+
+1. Navigate to the [Azure Portal](https://portal.azure.com)
+2. Go to **Microsoft Entra ID** (formerly Azure Active Directory)
+3. Select **App registrations** from the left menu
+4. Click **+ New registration**
+5. Configure the registration:
+   - **Name**: `Event Calendar Web Service` (or your preferred name)
+   - **Supported account types**: Select **Accounts in this organizational directory only (Single tenant)**
+   - **Redirect URI**: Leave blank (not needed for client credentials flow)
+6. Click **Register**
+
+#### Step 2: Note the Application Details
+
+After registration, copy these values from the **Overview** page:
+- **Application (client) ID** → Use for `ClientId` in appsettings.json
+- **Directory (tenant) ID** → Use for `TenantId` in appsettings.json
+
+#### Step 3: Create Client Secret
+
+1. In your app registration, select **Certificates & secrets** from the left menu
+2. Under **Client secrets**, click **+ New client secret**
+3. Add a description (e.g., "Event Calendar Service Secret")
+4. Select an expiration period (e.g., 24 months)
+5. Click **Add**
+6. **Important**: Copy the secret **Value** immediately (it won't be shown again)
+   - Use this for `SecretKey` in appsettings.json
+
+#### Step 4: Configure API Permissions
+
+1. Select **API permissions** from the left menu
+2. Click **+ Add a permission**
+3. Select **Microsoft Graph**
+4. Select **Application permissions** (not Delegated permissions)
+5. Search for and select: **`Calendars.Read`**
+   - Expands to: `Calendars.Read` - Read calendars in all mailboxes
+6. Click **Add permissions**
+7. Click **Grant admin consent for [Your Organization]**
+8. Confirm by clicking **Yes**
+
+> **✅ Security Note**: This service requires **only** the `Calendars.Read` application permission. You do NOT need `User.Read`, `User.Read.All`, or any delegated permissions. This follows the principle of least privilege.
+
+#### Permission Requirements Explained
+
+**Required Permission:**
+- **`Calendars.Read`** (Application) - Allows the service to read calendar events from the specified user's mailbox using client credentials flow
+
+#### Step 5: Verify Configuration
+
+Your API permissions should show:
+| API / Permissions name | Type | Description | Status |
+|---|---|---|---|
+| Microsoft Graph (1) | | | |
+| Calendars.Read | Application | Read calendars in all mailboxes | ✅ Granted for [Organization] |
+
 ### Main Application Configuration
 
 Configure the service in `appsettings.json` (or environment variables/user secrets):
@@ -82,11 +143,13 @@ Configure the service in `appsettings.json` (or environment variables/user secre
 ```
 
 #### GraphApi Section
-- `ClientId` - Azure AD app registration client ID
-- `TenantId` - Azure AD directory (tenant) ID
-- `SecretKey` - Client secret from app registration
-- `CalendarUserUpn` - User principal name of the calendar owner
-- `CalendarName` - Name of the specific calendar to query
+- `ClientId` - Azure AD app registration client ID (from Step 2)
+- `TenantId` - Azure AD directory (tenant) ID (from Step 2)
+- `SecretKey` - Client secret value (from Step 3)
+- `CalendarUserUpn` - User principal name of the calendar owner (e.g., events@yourcompany.com)
+- `CalendarName` - Name of the specific calendar to query (e.g., "Event Calendar")
+
+> **Security Best Practice**: Never commit secrets to source control. Use Azure Key Vault, user secrets (for development), or environment variables for the `SecretKey` value.
 
 #### Cache Section
 - `DurationMinutes` - Cache duration in minutes (default: 5, range: 1-1440)
