@@ -35,13 +35,11 @@ public class CachedCalendarService : ICalendarService
     public Task<IReadOnlyList<SimpleAppointment>> GetTodaysAppointmentsAsync(CancellationToken cancellationToken = default)
     {
         string cacheKey = GetTodayCacheKey();
-
-        return _cache.GetOrCreateAsync(cacheKey, async entry =>
-        {
-            entry.AbsoluteExpirationRelativeToNow = _cacheDuration;
-            _logger.LogInformation("Cache miss for today's appointments. Fetching from Graph API. Cache duration: {Duration} minutes.", _cacheDuration.TotalMinutes);
-            return await _innerService.GetTodaysAppointmentsAsync(cancellationToken);
-        })!;
+        return GetCachedAsync(
+            cacheKey,
+            () => _innerService.GetTodaysAppointmentsAsync(cancellationToken),
+            "Cache miss for today's appointments. Fetching from Graph API. Cache duration: {Duration} minutes.",
+            _cacheDuration.TotalMinutes);
     }
 
     /// <inheritdoc />
@@ -51,17 +49,13 @@ public class CachedCalendarService : ICalendarService
         CancellationToken cancellationToken = default)
     {
         string cacheKey = GetRangeCacheKey(startDate, endDate);
-
-        return _cache.GetOrCreateAsync(cacheKey, async entry =>
-        {
-            entry.AbsoluteExpirationRelativeToNow = _cacheDuration;
-            _logger.LogInformation(
-                "Cache miss for appointments from {Start} to {End}. Fetching from Graph API. Cache duration: {Duration} minutes.",
-                startDate,
-                endDate,
-                _cacheDuration.TotalMinutes);
-            return await _innerService.GetRangeOfAppointmentsAsync(startDate, endDate, cancellationToken);
-        })!;
+        return GetCachedAsync(
+            cacheKey,
+            () => _innerService.GetRangeOfAppointmentsAsync(startDate, endDate, cancellationToken),
+            "Cache miss for appointments from {Start} to {End}. Fetching from Graph API. Cache duration: {Duration} minutes.",
+            startDate,
+            endDate,
+            _cacheDuration.TotalMinutes);
     }
 
     /// <summary>
@@ -71,14 +65,24 @@ public class CachedCalendarService : ICalendarService
     {
         _logger.LogWarning("Cache cleared manually. All cached appointment data will be removed.");
 
-        // Note: IMemoryCache doesn't provide a built-in way to clear all entries.
-        // In practice, cache entries will expire naturally based on their TTL.
-        // To force immediate refresh, we clear today's cache which is most commonly accessed.
-
         string todayKey = GetTodayCacheKey();
         _cache.Remove(todayKey);
 
         _logger.LogInformation("Cleared today's cache key: {CacheKey}. Other date range caches will expire naturally.", todayKey);
+    }
+
+    private Task<IReadOnlyList<SimpleAppointment>> GetCachedAsync(
+        string cacheKey,
+        Func<Task<IReadOnlyList<SimpleAppointment>>> factory,
+        string logMessage,
+        params object[] logArgs)
+    {
+        return _cache.GetOrCreateAsync(cacheKey, async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = _cacheDuration;
+            _logger.LogInformation(logMessage, logArgs);
+            return await factory();
+        })!;
     }
 
     private static string GetTodayCacheKey() => $"appointments_today_{DateTime.Today:yyyyMMdd}";
